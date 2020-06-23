@@ -20,7 +20,6 @@ namespace DAN_XXXVII_MilosPeric
         private static int _taskDelay;
         private static Random random = new Random();
         private readonly object objLock = new object();
-        private List<Thread> threadList = new List<Thread>();
         private static Semaphore _pool2 = new Semaphore(1, 10);
 
         public void WriteRandomNumbersToFile(object amount)
@@ -84,7 +83,7 @@ namespace DAN_XXXVII_MilosPeric
         }
 
         public void StartTrucks()
-        {            
+        {
             for (int i = 1; i <= 10; i++)
             {
                 Thread t = new Thread(new ParameterizedThreadStart(Worker2));
@@ -105,7 +104,7 @@ namespace DAN_XXXVII_MilosPeric
                 for (int i = 1; i <= 10; i++)
                 {
                     Thread tTruck = new Thread(new ParameterizedThreadStart(Worker));
-                    threadList.Add(tTruck);
+                    tTruck.Name = bestPaths[i - 1].ToString();
                     tTruck.Start(i);
                 }
                 Monitor.Pulse(objLock);
@@ -119,85 +118,88 @@ namespace DAN_XXXVII_MilosPeric
             stopwatch.Start();
             double unloadTime = loadTimes.ElementAt(truckNumber - 1) * 0.5;
             Thread.Sleep((int)unloadTime);
-            Console.WriteLine("Truck {0} finished unloading. Unload time: {1:N2} seconds.", truckNumber, stopwatch.Elapsed.TotalSeconds);
+            Console.WriteLine("Truck {0} finished unloading. Unload time: {1:N2} seconds.", 
+                truckNumber, stopwatch.Elapsed.TotalSeconds);
         }
 
         public void Worker2(object num)
         {
             Stopwatch stopwatch = new Stopwatch();
             Console.WriteLine("Truck {0} starts trip to destination code: {1}.", num, Thread.CurrentThread.Name);
-            
             _pool2.WaitOne();
             stopwatch.Start();
-            _taskDelay = random.Next(500, 5001);           
-            //Console.WriteLine("Task delay {0} T:{1}", _taskDelay, num);
+            _taskDelay = random.Next(500, 5001);
             _pool2.Release();
             if (_taskDelay > 3000)
             {
                 Thread.Sleep(_taskDelay);
-                Console.WriteLine("Truck {0} could not reach destination code: {1} in time. Returning truck.", num, Thread.CurrentThread.Name);
+                Console.WriteLine("Truck {0} could not reach destination code: {1} in time. Returning truck.", 
+                    num, Thread.CurrentThread.Name);
                 Thread.Sleep(_taskDelay);
-                Console.WriteLine("Truck {0} returned from failed trip destination code: {2}. Trip time: {1:N2} seconds.", num, stopwatch.Elapsed.TotalSeconds, Thread.CurrentThread.Name);
+                Console.WriteLine("Truck {0} returned from failed trip destination code: {2}. Trip time: {1:N2} seconds.", 
+                    num, stopwatch.Elapsed.TotalSeconds, Thread.CurrentThread.Name);
                 stopwatch.Reset();
             }
             else
             {
                 Thread.Sleep(_taskDelay);
-                Console.WriteLine("Truck {0} finishes trip to destination code: {1}. Trip time: {2:N2} seconds."
-                    , num, Thread.CurrentThread.Name, stopwatch.Elapsed.TotalSeconds);               
+                Console.WriteLine("Truck {0} finishes trip to destination code: {1}. Trip time: {2:N2} seconds.",
+                    num, Thread.CurrentThread.Name, stopwatch.Elapsed.TotalSeconds);
                 UnloadTrucks((int)num);
                 stopwatch.Reset();
-            }              
-        }
-
-    public void Worker(object num)
-    {
-        Stopwatch stopwatch = new Stopwatch();
-        _pool.WaitOne();
-        stopwatch.Start();
-        Console.WriteLine("Truck {0} has started loading.", num);
-        _taskDelay = random.Next(500, 5001);
-        loadTimes.Add(_taskDelay);
-        Thread.Sleep(_taskDelay);
-        Console.WriteLine("Truck {0} has finished loading. Loading time: {1:N2} seconds.", num, stopwatch.Elapsed.TotalSeconds);
-        stopwatch.Reset();
-        _pool.Release();
-        if ((int)num == 10)
-        {
-            lock (objLock)
-            {
-                Console.WriteLine("Loading finished.");
-                Console.WriteLine("Trucks starting path to destination...");
-                Thread.Sleep(_taskDelay);                
-                StartTrucks();
             }
         }
-    }
 
-    public void ReadPathingValues()
-    {
-        try
+        public void Worker(object num)
         {
-            lock (objLock)
+            Stopwatch stopwatch = new Stopwatch();
+            _pool.WaitOne();
+            stopwatch.Start();
+            Console.WriteLine("Truck {0} has started loading.", num);
+            _taskDelay = random.Next(500, 5001);
+            loadTimes.Add(_taskDelay);
+            Thread.Sleep(_taskDelay);
+            Console.WriteLine("Truck {0} has finished loading. Loading time: {1:N2} seconds.", 
+                num, stopwatch.Elapsed.TotalSeconds);
+            stopwatch.Reset();
+            _pool.Release();
+            if ((int)num == 10)
             {
-                using (StreamReader streamReader = new StreamReader(pathingFileName))
+                lock (objLock)
                 {
-                    string line;
-                    int number;
-                    while ((line = streamReader.ReadLine()) != null)
-                    {
-                        number = Convert.ToInt32(line);
-                        listOfPathingValues.Add(number);
-                    }
+                    Console.WriteLine("Loading finished.");
+                    Console.WriteLine("Trucks starting path to destination...");
+                    Thread.Sleep(_taskDelay);
+                    StartTrucks();
                 }
-                Monitor.Pulse(objLock);
             }
         }
-        catch (Exception e)
+
+        public void ReadPathingValues()
         {
-            Console.WriteLine("Can't read from {0} file or file doesn't exist.", pathingFileName);
-            Console.WriteLine(e.Message);
+            try
+            {
+                lock (objLock)
+                {
+                    using (StreamReader streamReader = new StreamReader(pathingFileName))
+                    {
+                        string line;
+                        int number;
+                        while ((line = streamReader.ReadLine()) != null)
+                        {
+                            number = Convert.ToInt32(line);
+                            listOfPathingValues.Add(number);
+                        }
+                    }
+                    Monitor.Pulse(objLock);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Can't read from {0} file or file doesn't exist.", pathingFileName);
+                Console.WriteLine(e.Message);
+            }
         }
     }
 }
-}
+
