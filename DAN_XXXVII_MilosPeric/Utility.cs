@@ -16,13 +16,15 @@ namespace DAN_XXXVII_MilosPeric
         private static List<int> listOfPathingValues = new List<int>();
         private List<int> bestPaths = new List<int>();
         private List<int> loadTimes = new List<int>();
-        private List<Thread> trucks = new List<Thread>(); 
+        private List<Thread> trucks = new List<Thread>();
         private static Semaphore _pool = new Semaphore(2, 2);
         private static int _taskDelay;
         private static Random random = new Random();
         private readonly object objLock = new object();
         private static Semaphore _pool2 = new Semaphore(1, 10);
         private static int counter = 0;
+        private static CountdownEvent countdown = new CountdownEvent(10);
+        private static EventWaitHandle threadSignal = new AutoResetEvent(false);
 
         /// <summary>
         /// Writes random set of numbers 1 to 5000 to textual file.
@@ -35,10 +37,6 @@ namespace DAN_XXXVII_MilosPeric
             {
                 lock (objLock)
                 {
-                    while (!File.Exists(pathingFileName))
-                    {
-                        Monitor.Wait(objLock);
-                    }
                     Console.WriteLine("Writing numbers to file....");
                     using (StreamWriter streamWriter = new StreamWriter(pathingFileName))
                     {
@@ -89,7 +87,7 @@ namespace DAN_XXXVII_MilosPeric
                 for (int i = 0; i < 10; i++)
                 {
                     bestPaths.Add(pathingList.ElementAt(i));
-                }                
+                }
                 Console.WriteLine("Manager calculated optimal paths: ");
                 foreach (var path in bestPaths)
                 {
@@ -106,6 +104,9 @@ namespace DAN_XXXVII_MilosPeric
         /// </summary>
         public void StartTrucks()
         {
+            countdown.Wait();
+            Console.WriteLine("Loading finished.");
+            Console.WriteLine("Trucks starting path to destination...");
             for (int i = 1; i <= 10; i++)
             {
                 Thread t = new Thread(new ParameterizedThreadStart(Worker2));
@@ -127,10 +128,17 @@ namespace DAN_XXXVII_MilosPeric
                 {
                     Monitor.Wait(objLock);
                 }
+                int threadStartCounter = 0;
                 for (int i = 1; i <= 10; i++)
                 {
                     Thread tTruck = new Thread(new ParameterizedThreadStart(Worker));
                     tTruck.Name = bestPaths[i - 1].ToString();
+                    if (threadStartCounter > 1)
+                    {
+                        threadStartCounter = 0;
+                        Console.WriteLine("waiting");
+                        countdown.Wait();
+                    }
                     tTruck.Start(i);
                 }
                 Monitor.Pulse(objLock);
@@ -149,7 +157,7 @@ namespace DAN_XXXVII_MilosPeric
             stopwatch.Start();
             double unloadTime = loadTimes.ElementAt(truckNumber - 1) * 0.5;
             Thread.Sleep((int)unloadTime);
-            Console.WriteLine("Truck {0} finished unloading at destination. Unload time: {1:N2} seconds.", 
+            Console.WriteLine("Truck {0} finished unloading at destination. Unload time: {1:N2} seconds.",
                 truckNumber, stopwatch.Elapsed.TotalSeconds);
         }
 
@@ -161,6 +169,7 @@ namespace DAN_XXXVII_MilosPeric
         {
             Stopwatch stopwatch = new Stopwatch();
             Console.WriteLine("Truck {0} starts trip to destination via route: {1}.", num, Thread.CurrentThread.Name);
+
             _pool2.WaitOne();
             stopwatch.Start();
             _taskDelay = random.Next(500, 5001);
@@ -169,10 +178,10 @@ namespace DAN_XXXVII_MilosPeric
             {
                 Thread.Sleep(_taskDelay);
                 Console.WriteLine("Truck {0} could not reach destination via route: {1} in optimal time." +
-                    " Returning truck to base.", 
+                    " Returning truck to base.",
                     num, Thread.CurrentThread.Name);
                 Thread.Sleep(_taskDelay);
-                Console.WriteLine("Truck {0} has returned to base after unsuccessfull trip via route: {2}. Total trip time: {1:N2} seconds.", 
+                Console.WriteLine("Truck {0} has returned to base after unsuccessfull trip via route: {2}. Total trip time: {1:N2} seconds.",
                     num, stopwatch.Elapsed.TotalSeconds, Thread.CurrentThread.Name);
                 //UnloadTrucks((int)num);
                 stopwatch.Reset();
@@ -196,31 +205,23 @@ namespace DAN_XXXVII_MilosPeric
         public void Worker(object num)
         {
             Stopwatch stopwatch = new Stopwatch();
-            _pool.WaitOne();           
+            _pool.WaitOne();
+            //threadSignal.Set();
             stopwatch.Start();
             Console.WriteLine("Truck {0} has started loading.", num);
             _taskDelay = random.Next(500, 5001);
             loadTimes.Add(_taskDelay);
             Thread.Sleep(_taskDelay);
             counter++;
-            Console.WriteLine("Truck {0} has finished loading. Loading time: {1:N2} seconds.", 
+            Console.WriteLine("Truck {0} has finished loading. Loading time: {1:N2} seconds.",
                 num, stopwatch.Elapsed.TotalSeconds);
             stopwatch.Reset();
-            if ((int)num == 10)
-            {
-                lock (objLock)
-                {
-                    Thread.Sleep(1000);
-                    Console.WriteLine("Loading finished.");
-                    Console.WriteLine("Trucks starting path to destination...");                   
-                    StartTrucks();
-                }
-            }
+            countdown.Signal();
             if (counter > 1)
             {
                 counter = 0;
                 _pool.Release(2);
-            }          
+            }
         }
 
         /// <summary>

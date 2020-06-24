@@ -22,9 +22,11 @@ namespace DAN_XXXVII_MilosPeric
             go.WaitOne();
             Thread tManager = new Thread(new ThreadStart(utility.ManagerMethod));
             tManager.Start();
-            ready.WaitOne();        
+            ready.WaitOne();
             Thread tTruckDriver = new Thread(new ThreadStart(utility.LoadTrucks));
             tTruckDriver.Start();
+            Thread tStartTrucks = new Thread(new ThreadStart(utility.StartTrucks));
+            tStartTrucks.Start();
             Console.ReadKey();
         }
     }
