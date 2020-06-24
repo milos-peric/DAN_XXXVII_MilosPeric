@@ -19,8 +19,8 @@ namespace DAN_XXXVII_MilosPeric
             Thread tManager = new Thread(new ThreadStart(utility.ManagerMethod));
             tManager.Start();
             tManager.Join();            
-            Thread tTruckLoader = new Thread(new ThreadStart(utility.LoadTrucks));
-            tTruckLoader.Start();
+            Thread tTruckDriver = new Thread(new ThreadStart(utility.LoadTrucks));
+            tTruckDriver.Start();
             Console.ReadKey();
         }
     }
