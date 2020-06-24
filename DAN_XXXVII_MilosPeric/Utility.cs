@@ -53,6 +53,7 @@ namespace DAN_XXXVII_MilosPeric
                         Console.WriteLine("Numbers written to file succesfully.");
                     }
                     Monitor.Pulse(objLock);
+                    Program.ready.Set();
                 }
             }
             catch (Exception e)
@@ -96,6 +97,7 @@ namespace DAN_XXXVII_MilosPeric
                 }
                 Console.WriteLine("\nManager sending coordinates to drivers...");
                 Monitor.Pulse(objLock);
+                Program.ready.Set();
             }
         }
 
@@ -241,6 +243,7 @@ namespace DAN_XXXVII_MilosPeric
                         }
                     }
                     Monitor.Pulse(objLock);
+                    Program.go.Set();
                 }
             }
             catch (Exception e)
