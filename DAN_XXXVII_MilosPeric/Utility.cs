@@ -35,10 +35,6 @@ namespace DAN_XXXVII_MilosPeric
             {
                 lock (objLock)
                 {
-                    while (!File.Exists(pathingFileName))
-                    {
-                        Monitor.Wait(objLock);
-                    }
                     Console.WriteLine("Writing numbers to file....");
                     using (StreamWriter streamWriter = new StreamWriter(pathingFileName))
                     {
